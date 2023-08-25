@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include <memory>
 #include <math.h>
 
@@ -194,14 +195,14 @@ public:
 	}
 };
 
-class SinContainer : public NumericElement{
+class SineContainer : public NumericElement{
 
 	shared_ptr<NumericElement> parameter;
 
 public:
-	SinContainer(){}
-	SinContainer(shared_ptr<NumericElement> _parameter) : parameter(_parameter){}
-	SinContainer(NumericElement* _parameter){
+	SineContainer(){}
+	SineContainer(shared_ptr<NumericElement> _parameter) : parameter(_parameter){}
+	SineContainer(NumericElement* _parameter){
 
 		parameter = shared_ptr<NumericElement>(_parameter);
 	}
@@ -218,22 +219,21 @@ public:
 class MathExpressionNode{
 
 	string math_expression;
+	vector<string> token_list;
 	string type_of_expr_container; // AddendCont., FactorCont., ...
 	vector<shared_ptr<MathExpressionNode>> son_nodes;
 
 	bool chr_is_num(char token) { return (token >= 48 && token <= 57)? true : false; }
+	bool is_symbol(string token) { return (token == "+" || token == "-" || token == "*" || token == "/" || token == "^"); }
 
-public:
-	MathExpressionNode(string _math_expression) : math_expression(_math_expression){}
-	
 	void break_down_expression(){
 
-		vector<string> token_list;
 		string token_buffer;
 		int opened_parenthesis = 0;
 
 		for(int i = 0; i < math_expression.size(); i++)
 		{
+
 			if(opened_parenthesis > 0)
 			{
 				if(math_expression[i] != '(' && math_expression[i] != '[' && math_expression[i] != '{'
@@ -246,39 +246,51 @@ public:
 
 			if(math_expression[i] == ' ') continue;
 
-			if(chr_is_num(math_expression[i]) || math_expression[i] == 'x')
-			{cout << "numbers";
-				if(chr_is_num(math_expression[i+1]) || math_expression[i+1] == 'x') 
-					token_buffer += math_expression[i];
-				else {
+			if(chr_is_num(math_expression[i]))
+			{
+				if(chr_is_num(math_expression[i+1]))
+					token_buffer += math_expression[i];	
+				else 
+				{
 					token_list.push_back( token_buffer + math_expression[i] );
 					token_buffer = "";
+
+					if(math_expression[i+1] == 'x') token_list.push_back("*");
 				}
 				
 				continue;
 			}
-/*
+
+			if(math_expression[i] == 'x')
+			{
+				token_list.push_back("x");
+
+				if(math_expression[i+1] == 'x' || chr_is_num(math_expression[i+1])) token_list.push_back("*");
+
+				continue;
+			}
+
 			if(math_expression.substr(i,3) == "log") { token_buffer += "log"; continue; }
 			if(math_expression.substr(i,2) == "ln")  { token_buffer += "ln";  continue; }
 			if(math_expression.substr(i,3) == "sin") { token_buffer += "sin"; continue; }
 			if(math_expression.substr(i,3) == "cos") { token_buffer += "cos"; continue; }
-			if(math_expression.substr(i,3) == "tan") { token_buffer += "tan"; continue; }*/
+			if(math_expression.substr(i,3) == "tan") { token_buffer += "tan"; continue; }
 
 			if(math_expression[i] == '(' || math_expression[i] == '[' || math_expression[i] == '{')
 			{
 				token_buffer += math_expression[i];
-				opened_parenthesis++;cout << "open_par"<<opened_parenthesis;
+				opened_parenthesis++;
 				continue;
 			}
 
 			if(math_expression[i] == ')' || math_expression[i] == ']' || math_expression[i] == '}')
-			{cout << "close_par"<<opened_parenthesis;
+			{
 				token_buffer += math_expression[i];
 
 				if(opened_parenthesis > 0) opened_parenthesis--;
 
 				if(opened_parenthesis == 0 && token_buffer.size() > 0)
-				{cout << "\n" << token_buffer << "\n";
+				{
 					token_list.push_back( token_buffer );
 					token_buffer = "";
 				}
@@ -286,9 +298,9 @@ public:
 				continue;
 			}
 
-			if(math_expression[i] == '+' || math_expression[i] == '-' || math_expression[i] == '*' 
-				|| math_expression[i] == 250/* '·' */ || math_expression[i] == '/' || math_expression[i] == '^')
-			{cout << "sign";
+			if(math_expression[i] == '+' || math_expression[i] == '-' 
+				|| math_expression[i] == '*' || math_expression[i] == '/' || math_expression[i] == '^')
+			{
 				token_list.push_back(string(1,math_expression[i]));
 				continue;
 			}
@@ -296,9 +308,151 @@ public:
 			//Error recognizing tokens
 			//...
 		}
-		cout << "\n\n";
+
+		if(token_list.size() == 1 && math_expression != "(-1)" &&
+			((token_list[0])[0] == '(' || (token_list[0])[0] == '[' || (token_list[0])[0] == '{')) //If all the expression is encapsulated
+		{
+			math_expression = math_expression.substr(1, math_expression.size()-2); //Remove () [] {}
+			token_list.clear();
+			this->break_down_expression();
+		}
+
+		cout << "\n\nBreaked: \n";
 		for(string s : token_list)
-			cout << s << "\n";
+			cout << s << " | ";
+		cout << "\n\n";
+	}
+
+	void set_type_of_expr_container(){
+
+		if(token_list.size() <= 2 && 
+			((token_list[0])[0] != '(' && (token_list[0])[0] != '[' && (token_list[0])[0] != '{')) //If all the expression is the parameter of a function
+		{
+			
+			if(math_expression.substr(0,3) == "log") type_of_expr_container = "LogarithmContainer";
+			if(math_expression.substr(0,2) == "ln")  type_of_expr_container = "NaturalLogarithmContainer";
+			if(math_expression.substr(0,3) == "sin") type_of_expr_container = "SineContainer"; 
+			if(math_expression.substr(0,3) == "cos") type_of_expr_container = "CosineContainer";
+			if(math_expression.substr(0,3) == "tan") type_of_expr_container = "TangentContainer";
+
+			return;
+		}
+
+		if(find(token_list.begin(), token_list.end(), "+") != token_list.end() ||
+			find(token_list.begin(), token_list.end(), "-") != token_list.end())
+		{
+			type_of_expr_container = "AddendContainer";
+			return;
+		}
+
+		if(find(token_list.begin(), token_list.end(), "*") != token_list.end())
+		{
+			type_of_expr_container = "FactorContainer";
+			return;
+		}
+
+		if(find(token_list.begin(), token_list.end(), "/") != token_list.end())
+		{
+			type_of_expr_container = "FractionContainer";
+			return;
+		}
+
+		if(find(token_list.begin(), token_list.end(), "^") != token_list.end())
+		{
+			type_of_expr_container = "PowerContainer";
+			return;
+		}
+	}
+
+public:
+	MathExpressionNode(string _math_expression) : math_expression(_math_expression){}
+	
+
+	void make_tree(){
+
+		break_down_expression();
+		set_type_of_expr_container();
+
+		if(type_of_expr_container == "SineContainer" || type_of_expr_container == "CosineContainer" || type_of_expr_container == "TangentContainer")
+		{
+			son_nodes.push_back( shared_ptr<MathExpressionNode>(new MathExpressionNode(token_list[0].substr(3, token_list[0].size()-3))) );
+		}
+
+		else if(type_of_expr_container == "NaturalLogarithmContainer")
+		{
+			son_nodes.push_back( shared_ptr<MathExpressionNode>(new MathExpressionNode(token_list[0].substr(2, token_list[0].size()-2))) );
+		}
+/*TODO  math_expression = "LogarithmContainer";
+		log2(x)  log(x)  log(3-1)(x)
+		else if(type_of_expr_container == "LogarithmContainer"){ 	
+			son_nodes.push_back( shared_ptr<MathExpressionNode>(new MathExpressionNode(token_list[i].substr(3, token_list[i].size()-3))) );
+			son_nodes.push_back( shared_ptr<MathExpressionNode>(new MathExpressionNode(token_list[i+1].substr(1, token_list[i+1].size()-2))) ); <<<<<<< ???
+			i++;
+			continue;
+		}*/
+
+		else
+		{
+			if(token_list.size() == 1){
+				if(chr_is_num((token_list[0])[0]) || token_list[0] == "(-1)") type_of_expr_container == "PureNumber";//set the value
+				if(token_list[0] == "x") type_of_expr_container == "UnknownValue";
+				return;
+			}
+
+			for(int i = 0; i < token_list.size(); i++) //Replace the - by + (-1) *
+			{
+				if(is_symbol(token_list[i]) == true && token_list[i] == "-")
+				{
+					token_list[i] = "+";
+					token_list.insert(token_list.begin() + i+1, {"(-1)", "*"});
+				}
+			}
+			cout << "\n\nWithout minuses: \n";
+			for(string s : token_list)
+				cout << s << " | ";
+			cout << "\n\n";
+
+			string less_prioritary_simbol;
+			if(type_of_expr_container == "AddendContainer")		   less_prioritary_simbol = "+";
+			else if(type_of_expr_container == "FactorContainer")   less_prioritary_simbol = "*";
+			else if(type_of_expr_container == "FractionContainer") less_prioritary_simbol = "/";
+			else if(type_of_expr_container == "PowerContainer")	   less_prioritary_simbol = "^";
+
+			string expr_token_buffer;
+
+			for(int i = 0; i < token_list.size(); i++)
+			{
+				if(is_symbol(token_list[i]) == false)
+				{
+
+					if(i == token_list.size()-1){
+						son_nodes.push_back( shared_ptr<MathExpressionNode>(new MathExpressionNode(expr_token_buffer + token_list[i])) );
+						break;
+					}
+
+					if(is_symbol(token_list[i+1]) == false) token_list.insert(token_list.begin() + i+1, "*");
+					
+					else if(is_symbol(token_list[i+1]) == true && token_list[i+1] == less_prioritary_simbol){
+						son_nodes.push_back( shared_ptr<MathExpressionNode>(new MathExpressionNode(expr_token_buffer + token_list[i])) );
+						expr_token_buffer = "";
+					}
+
+					else if(is_symbol(token_list[i+1]) == true && token_list[i+1] != less_prioritary_simbol)
+					{
+						expr_token_buffer += token_list[i] + " " + token_list[i+1];
+						i++;
+					}
+
+					continue;
+				}
+
+			}
+		}
+		cout << "in " << math_expression << "  of type " << type_of_expr_container << "\n___________________\n";
+		cin.get();
+
+		for(shared_ptr<MathExpressionNode> son_node : son_nodes)
+			son_node->make_tree();
 	}
 };
 
@@ -340,9 +494,9 @@ int main(){
 	NumericElement* B = new PureNumber(20);
 	LogarithmContainer c(A,B);
 	cout << c.operate(1);*/
-
-	MathExpressionNode m("[2x + (x - 3x) - 5] / (3 - x) + 6");
-	m.break_down_expression();
+//sin[2x + log(x - 3x) - 5] / (3 - x) + 6*2 - log(x - 2)(x)
+	MathExpressionNode m("sin[2x + log(x - 3x) - 5] / (3 - x) + 6*2 - log(x - 2)(x)");
+	m.make_tree();
 
 	cin.get();
 }
