@@ -475,6 +475,61 @@ public:
 		for(shared_ptr<MathExpressionNode> son_node : son_nodes)
 			son_node->make_tree();
 	}
+
+	NumericElement* to_NumericElement(){
+
+		if(type_of_expr_container == "PureNumber")
+		{
+			return new PureNumber(stod( (math_expression == "(-1)")? "-1" : math_expression ));//<<<<<<<<<<<<<<<<<<<<<<<
+		}
+
+		else if(type_of_expr_container == "UnknownValue")
+		{
+			return new UnknownValue();
+		}
+
+		else if(type_of_expr_container == "AddendContainer")
+		{
+			vector<NumericElement*> addends;
+
+			for(shared_ptr<MathExpressionNode> son_node : son_nodes)
+				addends.push_back(son_node->to_NumericElement());
+
+			return new AddendContainer(addends);
+		}
+
+		else if(type_of_expr_container == "FactorContainer")
+		{
+			vector<NumericElement*> factors;
+
+			for(shared_ptr<MathExpressionNode> son_node : son_nodes)
+				factors.push_back(son_node->to_NumericElement());
+
+			return new FactorContainer(factors);
+		}
+
+		else if(type_of_expr_container == "FractionContainer")
+		{
+			return new FractionContainer(son_nodes[0]->to_NumericElement(), son_nodes[1]->to_NumericElement());
+		}
+
+		else if(type_of_expr_container == "PowerContainer")
+		{
+			return new PowerContainer(son_nodes[0]->to_NumericElement(), son_nodes[1]->to_NumericElement());
+		}
+
+		else if(type_of_expr_container == "LogarithmContainer")
+		{
+			return new LogarithmContainer(son_nodes[0]->to_NumericElement(), son_nodes[1]->to_NumericElement());
+		}
+
+		else if(type_of_expr_container == "SineContainer")
+		{
+			return new SineContainer(son_nodes[0]->to_NumericElement());
+		}
+
+		else return new PureNumber(1);
+	}
 };
 
 class Function{
@@ -516,8 +571,10 @@ int main(){
 	LogarithmContainer c(A,B);
 	cout << c.operate(1);*/
 //sin[2x + log(x - 3x) - 5] / (3 - x) + 6*2 - log(x - 2)(x)
-	MathExpressionNode m("sin[2x + log(x - 3x) - 5] / (3 - x) + 6*2 - log(x - 2)(x) + ln(x)");
+	MathExpressionNode m("x^2 + 4x + 4");
 	m.make_tree();
+	NumericElement* ne =  m.to_NumericElement();
+	cout << ne->operate(-2);
 
 	cin.get();
 }
