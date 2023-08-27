@@ -249,7 +249,13 @@ class MathExpressionNode{
 			if(chr_is_num(math_expression[i]))
 			{
 				if(chr_is_num(math_expression[i+1]))
-					token_buffer += math_expression[i];	
+				{
+					token_buffer += math_expression[i];
+				}
+				else if(math_expression[i+1] == '.' && token_buffer.find(".") == string::npos) //For decimals
+				{
+					token_buffer = token_buffer + math_expression[i] + ".";cout << "decima num " << token_buffer<<"\n";
+				}
 				else 
 				{
 					token_list.push_back( token_buffer + math_expression[i] );
@@ -380,22 +386,29 @@ public:
 
 		else if(type_of_expr_container == "NaturalLogarithmContainer")
 		{
+			son_nodes.push_back( shared_ptr<MathExpressionNode>(new MathExpressionNode("2.718281828")));//e number as base
 			son_nodes.push_back( shared_ptr<MathExpressionNode>(new MathExpressionNode(token_list[0].substr(2, token_list[0].size()-2))) );
 		}
-/*TODO  math_expression = "LogarithmContainer";
-		log2(x)  log(x)  log(3-1)(x)
-		else if(type_of_expr_container == "LogarithmContainer"){ 	
-			son_nodes.push_back( shared_ptr<MathExpressionNode>(new MathExpressionNode(token_list[i].substr(3, token_list[i].size()-3))) );
-			son_nodes.push_back( shared_ptr<MathExpressionNode>(new MathExpressionNode(token_list[i+1].substr(1, token_list[i+1].size()-2))) ); <<<<<<< ???
-			i++;
-			continue;
-		}*/
+
+		else if(type_of_expr_container == "LogarithmContainer")
+		{ 	
+			if(token_list.size() == 2) //log2(x) log(3-1)(x)
+			{
+				son_nodes.push_back( shared_ptr<MathExpressionNode>(new MathExpressionNode(token_list[0].substr(3, token_list[0].size()-3))) );
+				son_nodes.push_back( shared_ptr<MathExpressionNode>(new MathExpressionNode(token_list[1])) );
+			}
+			else //log(x)
+			{
+				son_nodes.push_back( shared_ptr<MathExpressionNode>(new MathExpressionNode("10"))); //First node is de base numeric element
+				son_nodes.push_back( shared_ptr<MathExpressionNode>(new MathExpressionNode(token_list[0].substr(3, token_list[0].size()-3))) );
+			}
+		}
 
 		else
 		{
 			if(token_list.size() == 1){
-				if(chr_is_num((token_list[0])[0]) || token_list[0] == "(-1)") type_of_expr_container == "PureNumber";//set the value
-				if(token_list[0] == "x") type_of_expr_container == "UnknownValue";
+				if(chr_is_num((token_list[0])[0]) || token_list[0] == "(-1)") type_of_expr_container = "PureNumber";//set the value
+				if(token_list[0] == "x") type_of_expr_container = "UnknownValue";
 				return;
 			}
 
@@ -430,7 +443,15 @@ public:
 						break;
 					}
 
-					if(is_symbol(token_list[i+1]) == false) token_list.insert(token_list.begin() + i+1, "*");
+					if(is_symbol(token_list[i+1]) == false)
+					{
+						if(token_list[i].substr(0,3) != "log") token_list.insert(token_list.begin() + i+1, "*");
+						else{
+							son_nodes.push_back( shared_ptr<MathExpressionNode>(new MathExpressionNode(expr_token_buffer + token_list[i] + token_list[i+1])) );
+							i++;
+							expr_token_buffer = "";
+						}
+					}
 					
 					else if(is_symbol(token_list[i+1]) == true && token_list[i+1] == less_prioritary_simbol){
 						son_nodes.push_back( shared_ptr<MathExpressionNode>(new MathExpressionNode(expr_token_buffer + token_list[i])) );
@@ -495,7 +516,7 @@ int main(){
 	LogarithmContainer c(A,B);
 	cout << c.operate(1);*/
 //sin[2x + log(x - 3x) - 5] / (3 - x) + 6*2 - log(x - 2)(x)
-	MathExpressionNode m("sin[2x + log(x - 3x) - 5] / (3 - x) + 6*2 - log(x - 2)(x)");
+	MathExpressionNode m("sin[2x + log(x - 3x) - 5] / (3 - x) + 6*2 - log(x - 2)(x) + ln(x)");
 	m.make_tree();
 
 	cin.get();
