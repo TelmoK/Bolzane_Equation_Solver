@@ -6,20 +6,6 @@
 
 using namespace std;
 
-/*
-y =  3
-y =  2 + x
-y =  3x
-y =  1 / x
-y =  x^3
-y =  sin(x)
-y =  ln(x)
-y =  log2(x)
-y =  e^(x)
-y =  3^(x)
-y =  ( x^2 + ln(x+3) ) / ( 3x^3 - 8x + 23)
-*/
-
 class NumericElement{
 
 public:
@@ -254,7 +240,7 @@ class MathExpressionNode{
 				}
 				else if(math_expression[i+1] == '.' && token_buffer.find(".") == string::npos) //For decimals
 				{
-					token_buffer = token_buffer + math_expression[i] + ".";cout << "decima num " << token_buffer<<"\n";
+					token_buffer = token_buffer + math_expression[i] + ".";
 				}
 				else 
 				{
@@ -322,11 +308,6 @@ class MathExpressionNode{
 			token_list.clear();
 			this->break_down_expression();
 		}
-
-		cout << "\n\nBreaked: \n";
-		for(string s : token_list)
-			cout << s << " | ";
-		cout << "\n\n";
 	}
 
 	void set_type_of_expr_container(){
@@ -376,8 +357,8 @@ public:
 
 	void make_tree(){
 
-		break_down_expression();
-		set_type_of_expr_container();
+		this->break_down_expression();
+		this->set_type_of_expr_container();
 
 		if(type_of_expr_container == "SineContainer" || type_of_expr_container == "CosineContainer" || type_of_expr_container == "TangentContainer")
 		{
@@ -420,10 +401,13 @@ public:
 					token_list.insert(token_list.begin() + i+1, {"(-1)", "*"});
 				}
 			}
-			cout << "\n\nWithout minuses: \n";
+
+			//<<<<<<<<<
+			cout << math_expression << ":\n";
 			for(string s : token_list)
 				cout << s << " | ";
 			cout << "\n\n";
+			//<<<<<<<<<
 
 			string less_prioritary_simbol;
 			if(type_of_expr_container == "AddendContainer")		   less_prioritary_simbol = "+";
@@ -469,8 +453,6 @@ public:
 
 			}
 		}
-		cout << "in " << math_expression << "  of type " << type_of_expr_container << "\n___________________\n";
-		cin.get();
 
 		for(shared_ptr<MathExpressionNode> son_node : son_nodes)
 			son_node->make_tree();
@@ -532,15 +514,109 @@ public:
 	}
 };
 
-class Function{
 
+
+class Equation_Solver{
+
+	NumericElement* function;
 
 public:
 
-	Function(){}
-	Function(string expression){
+	Equation_Solver(){}
+	Equation_Solver(string expression){
 
+		string func_expr;
+		string buff;
 
+		for(int i = 0; i < expression.size(); i++)
+		{
+			if(expression[i] == '=')
+			{
+				func_expr = buff;
+				buff = "";
+				continue;
+			}
+			else
+			{
+				buff += expression[i];
+			}
+		}
+
+		func_expr = func_expr + " - (" + buff + ")"; 
+cout << "The bolzane function is " << func_expr << "\n";
+		MathExpressionNode MthExprNode(func_expr);
+		MthExprNode.make_tree();
+		function = MthExprNode.to_NumericElement();
+	}
+
+	double solve(){
+
+		double A = -pow(10, 10);cout << "A is " << A << "\n"; 
+		double B = pow(10, 10);cout << "B is " << B << "\n";
+		int N = pow(10, 3);cout << "N is " << N << "\n";
+
+		double dX = abs(B - A) / N;
+
+		struct Interval{
+			double A, B;
+			Interval(double _A, double _B) : A(_A), B(_B){}
+		};
+
+		vector<Interval> posible_extremes;
+		vector<Interval> sign_changes;
+		int i0 = 0;
+
+		for(int i = 0; i < N; i++)
+		{
+			cout << "A is " << A << "  dX is " << dX << "  i is " << i << " ";
+			cout << "f(" << A + dX*i << ") = " << function->operate(A + dX*i) << "\n";
+			if(i == N-1){
+				posible_extremes.push_back(Interval( A + dX*i0 , A + dX*i));
+				break;
+			}
+
+			if(function->operate(A + dX*i) / abs(function->operate(A + dX*i)) != function->operate(A + dX*(i+1)) / abs(function->operate(A + dX*(i+1)))) // Sign changes
+			{
+				posible_extremes.push_back(Interval( A + dX*i0 , A + dX*i));
+				sign_changes.push_back(Interval( A + dX*i , A + dX*(i+1)));cout << "dX is " << dX << " and dX*i " << dX*i << " when i = " << i << "\n";
+				i0 = i+1;
+			}
+		}
+
+		//<<<<<<<<<<<<<<<<<<<<<<<<
+		cout << "Sign change intervals (" << sign_changes.size() << "):\n";
+		for(Interval It : sign_changes){
+			cout << "(" << It.A << ", " << It.B << ")  ";
+		}
+		//<<<<<<<<<<<<<<<<<<<<<<<<
+
+		for(Interval& itv : sign_changes)
+		{
+			while(abs(itv.B - itv.A) > 0.001)
+			{
+				dX = abs(itv.B - itv.A) / N;
+
+				for(int i = 0; i < N; i++){
+					if(function->operate(itv.A + dX*i) / abs(function->operate(itv.A + dX*i)) != function->operate(itv.A + dX*(i+1)) / abs(function->operate(itv.A + dX*(i+1))))
+					{
+						itv.A = itv.A + dX*i;
+						itv.B = itv.A + dX*(i+1);
+						break;
+					}
+				}
+			}
+			cout << abs(itv.B - itv.A) << endl;
+		}
+
+		cout << "\n\nSolutions______________\n\n";
+		//<<<<<<<<<<<<<<<<<<<<<<<<
+
+		for(Interval It : sign_changes){
+			cout << "In (" << It.A << ", " << It.B << ") " << It.A + abs(It.B - It.A) / 2 << "   ";
+		}
+		//<<<<<<<<<<<<<<<<<<<<<<<<
+
+		return 1;
 	}
 };
 
@@ -548,33 +624,14 @@ public:
 
 int main(){
 
-	/*
-	shared_ptr<NumericElement> a1(new PureNumber(2));
-	shared_ptr<NumericElement> a2(new UnknownValue());
-	shared_ptr<NumericElement> A(new FactorContainer({a1,a2}));
-
-
-	shared_ptr<NumericElement> b1(new UnknownValue());
-
-	shared_ptr<NumericElement> bb2(new PureNumber(-3));
-	shared_ptr<NumericElement> bb3(new UnknownValue());
-
-	shared_ptr<NumericElement> b2(new FactorContainer({bb2,bb3}));
-
-	shared_ptr<NumericElement> B(new AddendContainer({b1,b2}));
-
-
-	shared_ptr<NumericElement> C(new PureNumber(-5));*/
-/*
-	NumericElement* A = new PureNumber(10);
-	NumericElement* B = new PureNumber(20);
-	LogarithmContainer c(A,B);
-	cout << c.operate(1);*/
 //sin[2x + log(x - 3x) - 5] / (3 - x) + 6*2 - log(x - 2)(x)
-	MathExpressionNode m("x^2 + 4x + 4");
+/*	MathExpressionNode m("sin[2x] / (3 - x) + 6*2 - log(x - 2)(x)");
 	m.make_tree();
 	NumericElement* ne =  m.to_NumericElement();
-	cout << ne->operate(-2);
+	cout << ne->operate(4);*/
+
+	Equation_Solver es("2x +10 = 0");
+	es.solve();
 
 	cin.get();
 }
