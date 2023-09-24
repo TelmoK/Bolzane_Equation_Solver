@@ -518,7 +518,18 @@ public:
 
 class Equation_Solver{
 
-	NumericElement* function;
+	NumericElement* function_expression;
+
+	double function(double x_val){
+
+		return function_expression->operate(x_val);
+	}
+
+	double derived_function(double x_val){
+
+		double h = pow(10, -8);
+		return (function(x_val + h) - function(x_val)) / h;
+	}
 
 public:
 
@@ -543,95 +554,115 @@ public:
 		}
 
 		func_expr = func_expr + " - (" + buff + ")"; 
-cout << "The bolzane function is " << func_expr << "\n";
+
 		MathExpressionNode MthExprNode(func_expr);
 		MthExprNode.make_tree();
-		function = MthExprNode.to_NumericElement();
+
+		function_expression = MthExprNode.to_NumericElement();
 	}
 
-	double solve(){
+	vector<double> solve(){
 
-		double A = -pow(10, 10);cout << "A is " << A << "\n"; 
-		double B = pow(10, 10);cout << "B is " << B << "\n";
+		vector<double> solutions;
+
+		double A = -pow(10, 2);cout << "A is " << A << "\n"; //TODO 
+		double B = pow(10, 2);cout << "B is " << B << "\n";  // Parámetros para escoger la precisión de la resolución
 		int N = pow(10, 3);cout << "N is " << N << "\n";
 
 		double dX = abs(B - A) / N;
 
-		struct Interval{
+		struct Interval
+		{
 			double A, B;
 			Interval(double _A, double _B) : A(_A), B(_B){}
 		};
 
-		vector<Interval> posible_extremes;
-		vector<Interval> sign_changes;
-		int i0 = 0;
+		vector<Interval> intervals_to_analyse;
+		vector<Interval> new_intervals_to_analyse;
+		vector<Interval> solution_intervals;
 
-		for(int i = 0; i < N; i++)
+		intervals_to_analyse.push_back(Interval(A, B));// Wide initial interval
+
+		
+		reducing_intervals:
+
+		for(Interval interval : intervals_to_analyse)
 		{
-			cout << "A is " << A << "  dX is " << dX << "  i is " << i << " ";
-			cout << "f(" << A + dX*i << ") = " << function->operate(A + dX*i) << "\n";
-			if(i == N-1){
-				posible_extremes.push_back(Interval( A + dX*i0 , A + dX*i));
-				break;
+			A = interval.A;
+			B = interval.B;
+			dX = abs(B - A) / N;
+
+			if(abs(B - A) < 0.00001){ // Interval is already small  //TODO      0.001 será una variable para escoger la precisión de la resolución
+				solution_intervals.push_back(interval);
+				continue;
 			}
 
-			if(function->operate(A + dX*i) / abs(function->operate(A + dX*i)) != function->operate(A + dX*(i+1)) / abs(function->operate(A + dX*(i+1)))) // Sign changes
+			for(int i = 0; i < N; i++)
 			{
-				posible_extremes.push_back(Interval( A + dX*i0 , A + dX*i));
-				sign_changes.push_back(Interval( A + dX*i , A + dX*(i+1)));cout << "dX is " << dX << " and dX*i " << dX*i << " when i = " << i << "\n";
-				i0 = i+1;
-			}
-		}
+				if(function(A + dX*i) == 0 && derived_function(A + dX*i) < pow(10, -10)) continue; //Asymptot y = 0
 
-		//<<<<<<<<<<<<<<<<<<<<<<<<
-		cout << "Sign change intervals (" << sign_changes.size() << "):\n";
-		for(Interval It : sign_changes){
-			cout << "(" << It.A << ", " << It.B << ")  ";
-		}
-		//<<<<<<<<<<<<<<<<<<<<<<<<
+				if(function(A + dX*i) / abs(function(A + dX*i)) != function(A + dX*(i+1)) / abs(function(A + dX*(i+1)))) // Sign changes
+				{
+					new_intervals_to_analyse.push_back( Interval( A + dX*i , A + dX*(i+1)) );
+					continue;
+				}
 
-		for(Interval& itv : sign_changes)
-		{
-			while(abs(itv.B - itv.A) > 0.001)
-			{
-				dX = abs(itv.B - itv.A) / N;
-
-				for(int i = 0; i < N; i++){
-					if(function->operate(itv.A + dX*i) / abs(function->operate(itv.A + dX*i)) != function->operate(itv.A + dX*(i+1)) / abs(function->operate(itv.A + dX*(i+1))))
+				if(function(A + dX*i) > 0 && i > 0) // Concavity of the function
+				{
+					if(function(A + dX*(i-1)) > function(A + dX*i) && function(A + dX*i) < function(A + dX*(i+1)))
 					{
-						itv.A = itv.A + dX*i;
-						itv.B = itv.A + dX*(i+1);
-						break;
+						new_intervals_to_analyse.push_back( Interval(A + dX*(i-1), A + dX*(i+1)) );
+						continue;
+					}
+				}
+				else if(function(A + dX*i) < 0 && i > 0) // Convexity of the function
+				{
+					if(function(A + dX*(i-1)) < function(A + dX*i) && function(A + dX*i) > function(A + dX*(i+1)))
+					{
+						new_intervals_to_analyse.push_back( Interval(A + dX*(i-1), A + dX*(i+1)) );
+						continue;
 					}
 				}
 			}
-			cout << abs(itv.B - itv.A) << endl;
 		}
 
-		cout << "\n\nSolutions______________\n\n";
-		//<<<<<<<<<<<<<<<<<<<<<<<<
+		intervals_to_analyse.clear();
+		intervals_to_analyse = new_intervals_to_analyse;
 
-		for(Interval It : sign_changes){
-			cout << "In (" << It.A << ", " << It.B << ") " << It.A + abs(It.B - It.A) / 2 << "   ";
+		new_intervals_to_analyse.clear();
+
+		if(intervals_to_analyse.size() > 0)
+			goto reducing_intervals;
+		
+
+
+		for(Interval itv : solution_intervals)
+		{
+			double x_val =  itv.A + abs(itv.B - itv.A) / 2;
+			if(abs(x_val) < 0.00001) x_val = 0;// TODO    Precission
+			
+			if(function(x_val) < 0.000001) solutions.push_back(x_val);
+			cout << x_val << " has been valued, f(" << x_val << ") = " << function(x_val) << "\n";
 		}
-		//<<<<<<<<<<<<<<<<<<<<<<<<
 
-		return 1;
+		return solutions;
 	}
 };
 
 
 
 int main(){
+/*
+	FAILS
+	2x = -10
+*/
 
-//sin[2x + log(x - 3x) - 5] / (3 - x) + 6*2 - log(x - 2)(x)
-/*	MathExpressionNode m("sin[2x] / (3 - x) + 6*2 - log(x - 2)(x)");
-	m.make_tree();
-	NumericElement* ne =  m.to_NumericElement();
-	cout << ne->operate(4);*/
+	Equation_Solver es("x^3 - 6x - 5 = 0");
+	vector<double> sols = es.solve();
 
-	Equation_Solver es("2x +10 = 0");
-	es.solve();
+	cout << "Solutions:\n";
+	for(double s : sols)
+		cout << s << "\n";
 
 	cin.get();
 }
