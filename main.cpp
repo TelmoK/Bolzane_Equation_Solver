@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <memory>
 #include <math.h>
+#include <limits>
 
 using namespace std;
 
@@ -308,6 +309,13 @@ class MathExpressionNode{
 			token_list.clear();
 			this->break_down_expression();
 		}
+
+		//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		cout << "In " << math_expression << "  ";
+		for(string s : token_list)
+			cout << s << " | ";
+		cout << "\n";
+		//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 	}
 
 	void set_type_of_expr_container(){
@@ -397,17 +405,19 @@ public:
 			{
 				if(is_symbol(token_list[i]) == true && token_list[i] == "-")
 				{
+				/*	if(i == 0) // If sign is part of the expression
+					{
+						token_list[i] = "(-1)";
+						token_list.insert(token_list.begin() + i+1, {"*"});
+						continue;
+					}*/
+
 					token_list[i] = "+";
 					token_list.insert(token_list.begin() + i+1, {"(-1)", "*"});
 				}
 			}
 
-			//<<<<<<<<<
-			cout << math_expression << ":\n";
-			for(string s : token_list)
-				cout << s << " | ";
-			cout << "\n\n";
-			//<<<<<<<<<
+			
 
 			string less_prioritary_simbol;
 			if(type_of_expr_container == "AddendContainer")		   less_prioritary_simbol = "+";
@@ -452,6 +462,13 @@ public:
 				}
 
 			}
+
+			//<<<<<<<<<
+			cout << math_expression << " of type " << type_of_expr_container << ":\n";
+			for(string s : token_list)
+				cout << s << " | ";
+			cout << "\n\n";
+			//<<<<<<<<<
 		}
 
 		for(shared_ptr<MathExpressionNode> son_node : son_nodes)
@@ -585,7 +602,7 @@ public:
 
 		
 		reducing_intervals:
-
+cout << "Searchig interbals\n";
 		for(Interval interval : intervals_to_analyse)
 		{
 			A = interval.A;
@@ -598,7 +615,9 @@ public:
 			}
 
 			for(int i = 0; i < N; i++)
-			{
+			{cout << "f(" << A + dX*i << ") = " << function(A + dX*i) << "\n";
+				if(isnan(function(A + dX*i))) cout << "IS NAN\n";
+
 				if(function(A + dX*i) == 0 && derived_function(A + dX*i) < pow(10, -10)) continue; //Asymptot y = 0
 
 				if(function(A + dX*i) / abs(function(A + dX*i)) != function(A + dX*(i+1)) / abs(function(A + dX*(i+1)))) // Sign changes
@@ -635,12 +654,11 @@ public:
 			goto reducing_intervals;
 		
 
-
 		for(Interval itv : solution_intervals)
 		{
 			double x_val =  itv.A + abs(itv.B - itv.A) / 2;
 			if(abs(x_val) < 0.00001) x_val = 0;// TODO    Precission
-			
+
 			if(function(x_val) < 0.000001) solutions.push_back(x_val);
 			cout << x_val << " has been valued, f(" << x_val << ") = " << function(x_val) << "\n";
 		}
@@ -652,12 +670,11 @@ public:
 
 
 int main(){
-/*
+/*x^3 - 6x - 5 = 0
 	FAILS
 	2x = -10
 */
-
-	Equation_Solver es("x^3 - 6x - 5 = 0");
+	Equation_Solver es("ln(x) = 0");
 	vector<double> sols = es.solve();
 
 	cout << "Solutions:\n";
